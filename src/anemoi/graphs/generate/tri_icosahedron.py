@@ -183,8 +183,10 @@ def add_edges_to_nx_graph(
         node_neighbours = get_neighbours_within_hops(r_sphere, x_hops, valid_nodes=valid_nodes)
 
         _, vertex_mapping_index = tree.query(r_vertices_rad, k=1)
-        for idx_node, idx_neighbours in node_neighbours.items():
-            graph = add_neigbours_edges(graph, idx_node, idx_neighbours, vertex_mapping_index=vertex_mapping_index)
+#        for idx_node, idx_neighbours in node_neighbours.items():
+#            graph = add_neigbours_edges(graph, idx_node, idx_neighbours, vertex_mapping_index=vertex_mapping_index)
+        neighbor_pairs = create_node_neighbors_list(graph, node_neighbours, vertex_mapping_index)
+        graph.add_edges_from(neighbor_pairs)
 
     return graph
 
@@ -270,3 +272,23 @@ def add_neigbours_edges(
             graph.add_edge(node_neighbour, node)
 
     return graph
+
+def create_node_neighbors_list(
+    graph: nx.Graph,
+    node_neighbors: dict[int, set[int]],
+    vertex_mapping_index: np.ndarray | None = None,
+    self_loops: bool = False,
+):
+    graph_nodes_idx = list(sorted(graph.nodes))
+
+    if vertex_mapping_index is None:
+        vertex_mapping_index = np.arange(len(graph.nodes)).reshape(len(graph.nodes), 1)
+
+    neighbor_pairs = [
+        (graph_nodes_idx[vertex_mapping_index[node_neighbor][0]], graph_nodes_idx[vertex_mapping_index[node][0]])
+        for node, neighbors in node_neighbors.items()
+        for node_neighbor in neighbors
+        if node != node_neighbor or (self_loops and node != node_neighbor)
+    ]
+
+    return neighbor_pairs
